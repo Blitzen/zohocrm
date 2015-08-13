@@ -12,6 +12,6 @@ or from source:
 
     from zohocrm import API
 
-    api = API(api_key="Your API Key")
+    api = API(auth_token="Your Auth Token")
     api.get_records()
     # Stuff is returned
