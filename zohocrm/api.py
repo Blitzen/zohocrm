@@ -1,6 +1,65 @@
 from __future__ import unicode_literals
+from xml.etree import ElementTree
 
 import requests
+
+
+class ZohoCRMAPIError(Exception):
+    pass
+
+
+record_types = (
+    'leads',
+    'contacts',
+)
+
+
+xml_template = '''<{record_name}>
+{rows}
+</{record_name}>'''
+
+
+row_template = '''<row no="{row_number}">
+{values}</row>'''
+
+value_template = '<FL val="{key}"><![CDATA[{value}]]></FL>\n'
+
+
+def records_to_xml(records):
+    '''
+    Given a dict of records create xml.
+
+    format expected is:
+    {
+        'leads': [{ 'Company': 'Some Company, ... }, ...]
+    }
+    '''
+    global record_types
+    xml_records = ''
+
+    for record_type in record_types:
+        if record_type not in records:
+            continue
+        data = records[record_type]
+        if not isinstance(data, list):
+            data = [data]
+        rows = ''
+        for i, row in enumerate(data):
+            values = ''
+            for key in row:
+                values += value_template.format(
+                    key=key,
+                    value=row[key],
+                )
+            rows += row_template.format(
+                row_number = i + 1,
+                values = values,
+            )
+        xml_records += xml_template.format(
+            record_name = record_type.title(),
+            rows = rows,
+        )
+    return xml_records
 
 
 class API(object):
@@ -22,13 +81,37 @@ class API(object):
         )
         return response
 
-    def _params(self):
-        return dict(
+    def insert_records(self, record_list):
+        xml_data = records_to_xml(record_list)
+
+        if xml_data == '':
+            raise ValueError(
+                'Unable to create xml from record_list:\n{}'.format(record_list)
+            )
+
+        response = self._request(
+            'Leads/insertRecords',
+            format = 'xml',
+            method = 'post',
+            params = dict(
+                xmlData = xml_data,
+            )
+        )
+        return response
+
+    def _update_params(self, params=None):
+        if params is None:
+            params = dict()
+
+        defaults = dict(
             scope = 'crmapi',
             authtoken = self.auth_token,
         )
 
-    def _request(self, path, format='json', method='get'):
+        defaults.update(params)
+        return defaults
+
+    def _request(self, path, format='json', method='get', params=None):
         root_path = self.json_root_path if format == 'json' else self.xml_root_path
 
         url = '{}://{}/{}/{}'.format(
@@ -38,14 +121,36 @@ class API(object):
             path
         )
 
-        resp = self.session.get(
+        if method == 'get':
+            func = self.session.get
+        elif method == 'post':
+            func = self.session.post
+        else:
+            raise ValueError(
+                '{} isn\'t a valid method, get or post allowed'.format(method)
+            )
+
+        resp = func(
             url,
-            params = self._params()
+            params = self._update_params(params)
         )
 
         return self._handle_response(resp)
 
     def _handle_response(self, response):
-        return response.json()['response']['result']
+        try:
+            json = response.json()
+        except ValueError:
+            return self._handle_xml(response.content)
+
+        if 'result' in json['response']:
+            return json['response']['result']
+        else:
+            raise ZohoCRMAPIError(json)
+
+    def _handle_xml(self, xml):
+        # TODO: https://docs.python.org/2/library/xml.html#defused-packages
+        # because we shouldn't true zoho
+        return ElementTree.fromstring(xml)
 
 

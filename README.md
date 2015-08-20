@@ -14,4 +14,9 @@ or from source:
 
     api = API(auth_token="Your Auth Token")
     api.get_records()
-    # Stuff is returned
+    # {'Leads': {'row': {'no': '1', 'FL': [{'val': 'LEADID', ...
+
+## Testings
+
+    pip install -r test_requirements.txt
+    python tests.py
