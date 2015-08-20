@@ -62,6 +62,43 @@ def records_to_xml(records):
     return xml_records
 
 
+def get_auth_token(email, password):
+    #https://accounts.zoho.com/apiauthtoken/nb/create?SCOPE=ZohoCRM/crmapi&EMAIL_ID=albert%2Bzohocrm%40albertoconnor.ca&PASSWORD=qw300w%3A%29
+    url = 'https://accounts.zoho.com/apiauthtoken/nb/create'
+    params = dict(
+        SCOPE = 'ZohoCRM/crmapi',
+        EMAIL_ID = email,
+        PASSWORD = password,
+    )
+
+    resp = requests.get(
+        url,
+        params = params
+    )
+
+    auth_token = None
+
+    # TODO: This parse isn't very robust,
+    # but neither is zoho's response format
+    for line in resp.content.split('\n'):
+        if line.startswith('RESULT'):
+            key,value = line.split('=')
+            if value == 'TRUE':
+                result = True
+            else:
+                result = False
+
+        if line.startswith('AUTHTOKEN'):
+            key,value = line.split('=')
+            auth_token = value
+
+    if result:
+        return auth_token
+
+    else:
+        return False
+
+
 class API(object):
     def __init__(self, auth_token, session=None):
         self.protocol = 'https'
