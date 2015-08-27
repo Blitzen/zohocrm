@@ -80,7 +80,7 @@ def get_auth_token(email, password):
 
     # TODO: This parse isn't very robust,
     # but neither is zoho's response format
-    for line in resp.content.split('\n'):
+    for line in resp.text.split('\n'):
         if line.startswith('RESULT'):
             key,value = line.split('=')
             if value == 'TRUE':
@@ -178,7 +178,7 @@ class API(object):
         try:
             json = response.json()
         except ValueError:
-            return self._handle_xml(response.content)
+            return self._handle_xml(response.text)
 
         if 'result' in json['response']:
             return json['response']['result']
