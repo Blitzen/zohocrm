@@ -46,7 +46,7 @@ def records_to_xml(records):
         rows = ''
         for i, row in enumerate(data):
             values = ''
-            for key in row:
+            for key in sorted(row):
                 values += value_template.format(
                     key=key,
                     value=row[key],
