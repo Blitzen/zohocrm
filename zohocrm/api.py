@@ -118,7 +118,7 @@ class API(object):
         )
         return response
 
-    def insert_records(self, record_list):
+    def insert_records(self, record_list, duplicate_check=None):
         xml_data = records_to_xml(record_list)
 
         if xml_data == '':
@@ -126,13 +126,16 @@ class API(object):
                 'Unable to create xml from record_list:\n{}'.format(record_list)
             )
 
+        params = dict(xmlData = xml_data)
+
+        if duplicate_check is not None:
+            params['duplicateCheck'] = duplicate_check
+
         response = self._request(
             'Leads/insertRecords',
             format = 'xml',
             method = 'post',
-            params = dict(
-                xmlData = xml_data,
-            )
+            params = params,
         )
         return response
 
